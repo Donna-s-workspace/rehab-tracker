@@ -10,13 +10,20 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://rehabuser:SecurePass2026!@rehab-tracker-db-standalone:5432/rehabtracker
+      - DATABASE_URL=postgresql://rehabuser:SecurePass2026!@rehab-tracker-db:5432/rehabtracker
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production-$(openssl rand -hex 32)}
       - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     labels:
       - "coolify.managed=true"
       - "traefik.enable=true"
-      - "traefik.http.routers.rehab-app.rule=Host(`rehab.matthias.nl`)"
+      - "traefik.http.routers.rehab-app.rule=Host(\`rehab.matthias.nl\`)"
       - "traefik.http.routers.rehab-app.entrypoints=http"
       - "traefik.http.services.rehab-app.loadbalancer.server.port=3000"
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
