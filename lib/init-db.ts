@@ -7,12 +7,12 @@ export async function initializeDatabase() {
     console.log('🔄 Checking database initialization...');
     
     // Check if demo user exists
-    const result = await query(
+    const result = await query<{ id: number }>(
       'SELECT id FROM users WHERE email = $1',
       ['demo@rehab.local']
     );
     
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       console.log('📝 Creating demo user...');
       
       // Hash the password
