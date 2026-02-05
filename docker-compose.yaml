@@ -20,5 +20,3 @@ services:
       - "traefik.http.routers.rehab-app.rule=Host(`rehab.matthias.nl`)"
       - "traefik.http.routers.rehab-app.entrypoints=http"
       - "traefik.http.services.rehab-app.loadbalancer.server.port=3000"
-    networks:
-      - coolify
