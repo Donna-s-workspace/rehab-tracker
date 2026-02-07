@@ -4,6 +4,31 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { 
+  Card, 
+  Button, 
+  Label, 
+  TextInput, 
+  Textarea, 
+  Select,
+  Alert,
+  Badge,
+  Spinner
+} from 'flowbite-react';
+import { 
+  HiHome,
+  HiChartBar,
+  HiLightBulb,
+  HiLogout,
+  HiPlus,
+  HiTrash,
+  HiCheckCircle,
+  HiX,
+  HiClipboardList,
+  HiScale,
+  HiHeart,
+  HiPencil
+} from 'react-icons/hi';
 
 interface Exercise {
   id: string;
@@ -70,7 +95,7 @@ export default function LogSessionPage() {
     setSets([
       ...sets,
       {
-        exercise_id: lastSet.exercise_id, // Copy last exercise
+        exercise_id: lastSet.exercise_id,
         set_number: newSetNumber,
         reps: 0,
         weight: null,
@@ -82,7 +107,13 @@ export default function LogSessionPage() {
 
   const removeSet = (index: number) => {
     if (sets.length > 1) {
-      setSets(sets.filter((_, i) => i !== index));
+      const updatedSets = sets.filter((_, i) => i !== index);
+      // Re-number sets
+      const reNumbered = updatedSets.map((set, i) => ({
+        ...set,
+        set_number: i + 1
+      }));
+      setSets(reNumbered);
     }
   };
 
@@ -93,7 +124,6 @@ export default function LogSessionPage() {
   };
 
   const validateForm = (): boolean => {
-    // Check that all sets have required fields
     for (let i = 0; i < sets.length; i++) {
       const set = sets[i];
       if (!set.exercise_id) {
@@ -124,7 +154,6 @@ export default function LogSessionPage() {
     setIsSubmitting(true);
 
     try {
-      // 1. Create session
       const sessionResponse = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -142,7 +171,6 @@ export default function LogSessionPage() {
       const sessionData = await sessionResponse.json();
       const sessionId = sessionData.session.id;
 
-      // 2. Create all sets
       for (const set of sets) {
         const setResponse = await fetch(`/api/sessions/${sessionId}/sets`, {
           method: 'POST',
@@ -165,10 +193,9 @@ export default function LogSessionPage() {
 
       setSuccess(true);
       
-      // Redirect to dashboard after 1 second
       setTimeout(() => {
         router.push('/dashboard');
-      }, 1000);
+      }, 1500);
 
     } catch (error) {
       console.error('Submission error:', error);
@@ -179,7 +206,11 @@ export default function LogSessionPage() {
   };
 
   if (status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Spinner size="xl" />
+      </div>
+    );
   }
 
   if (!session) {
@@ -187,238 +218,275 @@ export default function LogSessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Navigation */}
+      <nav className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Link href="/dashboard" className="text-xl font-bold">
-                Rehab Tracker
+              <Link href="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                💪 Rehab Tracker
               </Link>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="text-gray-700 hover:text-gray-900">
-                Dashboard
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link href="/dashboard">
+                <Button color="light" size="sm">
+                  <HiHome className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
               </Link>
-              <Link href="/log" className="text-blue-600 font-semibold">
-                Log Session
+              <Link href="/progress">
+                <Button color="light" size="sm" className="hidden sm:flex">
+                  <HiChartBar className="mr-2 h-4 w-4" />
+                  Progress
+                </Button>
               </Link>
-              <Link href="/progress" className="text-gray-700 hover:text-gray-900">
-                Progress
+              <Link href="/coaching">
+                <Button color="light" size="sm" className="hidden sm:flex">
+                  <HiLightBulb className="mr-2 h-4 w-4" />
+                  AI Coach
+                </Button>
               </Link>
-              <Link href="/coaching" className="text-gray-700 hover:text-gray-900">
-                AI Coaching
-              </Link>
-              <button
-                onClick={handleSignOut}
-                className="text-gray-700 hover:text-gray-900"
-              >
-                Sign Out
-              </button>
+              <Button color="gray" size="sm" onClick={handleSignOut}>
+                <HiLogout className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold mb-6">Log Session</h2>
+      <main className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <Card>
+          <div className="flex items-center mb-6">
+            <HiClipboardList className="h-8 w-8 text-blue-600 mr-3" />
+            <h2 className="text-3xl font-bold text-gray-900">Log Session</h2>
+          </div>
 
-            {error && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-red-800 text-sm">{error}</p>
+          {error && (
+            <Alert color="failure" icon={HiX} className="mb-6" onDismiss={() => setError(null)}>
+              <span className="font-medium">Error!</span> {error}
+            </Alert>
+          )}
+
+          {success && (
+            <Alert color="success" icon={HiCheckCircle} className="mb-6">
+              <span className="font-medium">Success!</span> Session logged successfully! Redirecting...
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            {/* Session Type */}
+            <div className="mb-8">
+              <Label htmlFor="sessionType" className="text-base font-semibold mb-3 block">
+                Session Type <span className="text-red-500">*</span>
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  type="button"
+                  onClick={() => setSessionType('rehab')}
+                  color={sessionType === 'rehab' ? 'blue' : 'light'}
+                  size="lg"
+                  className="h-16"
+                >
+                  <div className="flex flex-col items-center">
+                    <HiHeart className="h-6 w-6 mb-1" />
+                    <span className="font-semibold">Rehab</span>
+                  </div>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setSessionType('gym')}
+                  color={sessionType === 'gym' ? 'blue' : 'light'}
+                  size="lg"
+                  className="h-16"
+                >
+                  <div className="flex flex-col items-center">
+                    <HiChartBar className="h-6 w-6 mb-1" />
+                    <span className="font-semibold">Gym</span>
+                  </div>
+                </Button>
               </div>
-            )}
+            </div>
 
-            {success && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-green-800 text-sm">✓ Session logged successfully! Redirecting...</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              {/* Session Type */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Session Type <span className="text-red-500">*</span>
-                </label>
-                <div className="flex space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setSessionType('rehab')}
-                    className={`flex-1 py-2 px-4 rounded-md font-medium ${
-                      sessionType === 'rehab'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Rehab
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSessionType('gym')}
-                    className={`flex-1 py-2 px-4 rounded-md font-medium ${
-                      sessionType === 'gym'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Gym
-                  </button>
-                </div>
-              </div>
-
-              {/* Session Notes */}
-              <div className="mb-6">
-                <label htmlFor="sessionNotes" className="block text-sm font-medium text-gray-700 mb-2">
+            {/* Session Notes */}
+            <div className="mb-8">
+              <div className="flex items-center mb-2">
+                <HiPencil className="h-5 w-5 text-gray-600 mr-2" />
+                <Label htmlFor="sessionNotes" className="text-base font-semibold">
                   Session Notes
-                </label>
-                <textarea
-                  id="sessionNotes"
-                  value={sessionNotes}
-                  onChange={(e) => setSessionNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="How did the session go?"
-                />
+                </Label>
+              </div>
+              <Textarea
+                id="sessionNotes"
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                rows={3}
+                placeholder="How did the session go? Any observations?"
+                className="resize-none"
+              />
+            </div>
+
+            {/* Sets */}
+            <div className="mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Exercises & Sets</h3>
+                <Button
+                  type="button"
+                  onClick={addSet}
+                  color="purple"
+                  size="sm"
+                >
+                  <HiPlus className="mr-2 h-4 w-4" />
+                  Add Set
+                </Button>
               </div>
 
-              {/* Sets */}
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Exercises & Sets</h3>
-                  <button
-                    type="button"
-                    onClick={addSet}
-                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-600 rounded-md hover:bg-blue-50"
-                  >
-                    + Add Set
-                  </button>
-                </div>
+              <div className="space-y-4">
+                {sets.map((set, index) => (
+                  <Card key={index} className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
+                    <div className="flex justify-between items-center mb-4">
+                      <Badge color="purple" size="lg">
+                        Set {set.set_number}
+                      </Badge>
+                      {sets.length > 1 && (
+                        <Button
+                          type="button"
+                          onClick={() => removeSet(index)}
+                          color="failure"
+                          size="xs"
+                        >
+                          <HiTrash className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
 
-                <div className="space-y-4">
-                  {sets.map((set, index) => (
-                    <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="font-medium text-gray-900">Set {set.set_number}</h4>
-                        {sets.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeSet(index)}
-                            className="text-red-600 hover:text-red-700 text-sm"
-                          >
-                            Remove
-                          </button>
-                        )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Exercise */}
+                      <div className="md:col-span-2">
+                        <Label htmlFor={`exercise-${index}`}>
+                          Exercise <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          id={`exercise-${index}`}
+                          value={set.exercise_id}
+                          onChange={(e) => updateSet(index, 'exercise_id', e.target.value)}
+                          required
+                          icon={HiClipboardList}
+                        >
+                          <option value="">Select an exercise</option>
+                          {exercises.map((exercise) => (
+                            <option key={exercise.id} value={exercise.id}>
+                              {exercise.name} {exercise.is_rehab ? '(Rehab)' : ''}
+                            </option>
+                          ))}
+                        </Select>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Exercise */}
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Exercise <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            value={set.exercise_id}
-                            onChange={(e) => updateSet(index, 'exercise_id', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                          >
-                            <option value="">Select an exercise</option>
-                            {exercises.map((exercise) => (
-                              <option key={exercise.id} value={exercise.id}>
-                                {exercise.name} {exercise.is_rehab ? '(Rehab)' : ''}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                      {/* Reps */}
+                      <div>
+                        <Label htmlFor={`reps-${index}`}>
+                          Reps <span className="text-red-500">*</span>
+                        </Label>
+                        <TextInput
+                          id={`reps-${index}`}
+                          type="number"
+                          value={set.reps || ''}
+                          onChange={(e) => updateSet(index, 'reps', parseInt(e.target.value) || 0)}
+                          min="1"
+                          required
+                          placeholder="e.g., 10"
+                        />
+                      </div>
 
-                        {/* Reps */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Reps <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="number"
-                            value={set.reps || ''}
-                            onChange={(e) => updateSet(index, 'reps', parseInt(e.target.value) || 0)}
-                            min="1"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                          />
-                        </div>
+                      {/* Weight */}
+                      <div>
+                        <Label htmlFor={`weight-${index}`}>
+                          Weight (kg)
+                        </Label>
+                        <TextInput
+                          id={`weight-${index}`}
+                          type="number"
+                          value={set.weight || ''}
+                          onChange={(e) => updateSet(index, 'weight', e.target.value ? parseFloat(e.target.value) : null)}
+                          step="0.5"
+                          min="0"
+                          placeholder="Optional"
+                          icon={HiScale}
+                        />
+                      </div>
 
-                        {/* Weight */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Weight (kg)
-                          </label>
-                          <input
-                            type="number"
-                            value={set.weight || ''}
-                            onChange={(e) => updateSet(index, 'weight', e.target.value ? parseFloat(e.target.value) : null)}
-                            step="0.5"
-                            min="0"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Optional"
-                          />
-                        </div>
+                      {/* Pain Level */}
+                      <div>
+                        <Label htmlFor={`pain-${index}`}>
+                          Pain Level (0-10)
+                        </Label>
+                        <TextInput
+                          id={`pain-${index}`}
+                          type="number"
+                          value={set.pain_level ?? ''}
+                          onChange={(e) => updateSet(index, 'pain_level', e.target.value ? parseInt(e.target.value) : null)}
+                          min="0"
+                          max="10"
+                          placeholder="Optional"
+                          icon={HiHeart}
+                        />
+                      </div>
 
-                        {/* Pain Level */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Pain Level (0-10)
-                          </label>
-                          <input
-                            type="number"
-                            value={set.pain_level ?? ''}
-                            onChange={(e) => updateSet(index, 'pain_level', e.target.value ? parseInt(e.target.value) : null)}
-                            min="0"
-                            max="10"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Optional"
-                          />
-                        </div>
-
-                        {/* Notes */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Notes
-                          </label>
-                          <input
-                            type="text"
-                            value={set.notes}
-                            onChange={(e) => updateSet(index, 'notes', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Optional"
-                          />
-                        </div>
+                      {/* Notes */}
+                      <div>
+                        <Label htmlFor={`notes-${index}`}>
+                          Notes
+                        </Label>
+                        <TextInput
+                          id={`notes-${index}`}
+                          type="text"
+                          value={set.notes}
+                          onChange={(e) => updateSet(index, 'notes', e.target.value)}
+                          placeholder="Optional"
+                          icon={HiPencil}
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </Card>
+                ))}
               </div>
+            </div>
 
-              {/* Submit Button */}
-              <div className="flex space-x-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting || success}
-                  className="flex-1 py-3 px-6 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* Submit Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                type="submit"
+                disabled={isSubmitting || success}
+                color="purple"
+                size="lg"
+                className="flex-1"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Logging Session...
+                  </>
+                ) : (
+                  <>
+                    <HiCheckCircle className="mr-2 h-5 w-5" />
+                    Log Session
+                  </>
+                )}
+              </Button>
+              <Link href="/dashboard" className="flex-1">
+                <Button
+                  type="button"
+                  color="gray"
+                  size="lg"
+                  className="w-full"
                 >
-                  {isSubmitting ? 'Logging Session...' : 'Log Session'}
-                </button>
-                <Link
-                  href="/dashboard"
-                  className="py-3 px-6 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
-                >
+                  <HiX className="mr-2 h-5 w-5" />
                   Cancel
-                </Link>
-              </div>
-            </form>
-          </div>
-        </div>
+                </Button>
+              </Link>
+            </div>
+          </form>
+        </Card>
       </main>
     </div>
   );

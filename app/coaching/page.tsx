@@ -4,6 +4,19 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { Card, Button, Badge, Spinner, Alert } from 'flowbite-react';
+import {
+  HiHome,
+  HiPlus,
+  HiChartBar,
+  HiLogout,
+  HiLightBulb,
+  HiSparkles,
+  HiClock,
+  HiCheckCircle,
+  HiExclamation,
+  HiInformationCircle
+} from 'react-icons/hi';
 
 interface CoachingLog {
   id: string;
@@ -75,7 +88,6 @@ export default function CoachingPage() {
       setCurrentRecommendation(data.recommendation);
       setSessionsAnalyzed(data.sessionsAnalyzed);
       
-      // Reload history to show new recommendation
       await loadHistory();
     } catch (err: any) {
       setError(err.message);
@@ -85,25 +97,108 @@ export default function CoachingPage() {
   };
 
   const formatRecommendation = (text: string) => {
-    // Simple markdown-like formatting
-    return text
-      .split('\n')
-      .map((line, idx) => {
-        if (line.startsWith('## ')) {
-          return <h3 key={idx} className="text-lg font-bold mt-4 mb-2 text-blue-900">{line.slice(3)}</h3>;
+    const lines = text.split('\n');
+    const formatted: React.ReactElement[] = [];
+    let currentSection: { type: string; items: string[] } | null = null;
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      
+      if (trimmed.startsWith('## ')) {
+        if (currentSection) {
+          const section = renderSection(currentSection, formatted.length);
+          if (section) formatted.push(section);
+          currentSection = null;
         }
-        if (line.startsWith('# ')) {
-          return <h2 key={idx} className="text-xl font-bold mt-6 mb-3 text-blue-900">{line.slice(2)}</h2>;
+        formatted.push(
+          <h3 key={idx} className="text-xl font-bold mt-6 mb-3 text-blue-900 flex items-center">
+            <HiCheckCircle className="mr-2 h-5 w-5 text-green-600" />
+            {trimmed.slice(3)}
+          </h3>
+        );
+      } else if (trimmed.startsWith('# ')) {
+        if (currentSection) {
+          const section = renderSection(currentSection, formatted.length);
+          if (section) formatted.push(section);
+          currentSection = null;
         }
-        if (line.trim() === '') {
-          return <br key={idx} />;
+        formatted.push(
+          <h2 key={idx} className="text-2xl font-bold mt-8 mb-4 text-blue-900">
+            {trimmed.slice(2)}
+          </h2>
+        );
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const item = trimmed.slice(2);
+        if (!currentSection) {
+          currentSection = { type: 'list', items: [item] };
+        } else {
+          currentSection.items.push(item);
         }
-        return <p key={idx} className="mb-2 text-gray-700">{line}</p>;
-      });
+      } else if (trimmed === '') {
+        if (currentSection) {
+          const section = renderSection(currentSection, formatted.length);
+          if (section) formatted.push(section);
+          currentSection = null;
+        }
+        formatted.push(<div key={idx} className="h-2" />);
+      } else if (trimmed) {
+        if (currentSection) {
+          const section = renderSection(currentSection, formatted.length);
+          if (section) formatted.push(section);
+          currentSection = null;
+        }
+        formatted.push(
+          <p key={idx} className="mb-3 text-gray-700 leading-relaxed">
+            {trimmed}
+          </p>
+        );
+      }
+    });
+
+    if (currentSection) {
+      const section = renderSection(currentSection, formatted.length);
+      if (section) formatted.push(section);
+    }
+
+    return formatted;
+  };
+
+  const renderSection = (section: { type: string; items: string[] }, key: number) => {
+    if (section.type === 'list') {
+      return (
+        <ul key={key} className="mb-4 space-y-2">
+          {section.items.map((item, i) => {
+            const icon = getRecommendationIcon(item);
+            return (
+              <li key={i} className="flex items-start">
+                <span className="mr-3 mt-1 flex-shrink-0">{icon}</span>
+                <span className="text-gray-700">{item}</span>
+              </li>
+            );
+          })}
+        </ul>
+      );
+    }
+    return null;
+  };
+
+  const getRecommendationIcon = (text: string) => {
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('reduce') || lowerText.includes('decrease') || lowerText.includes('lower')) {
+      return <HiExclamation className="h-5 w-5 text-yellow-500" />;
+    } else if (lowerText.includes('increase') || lowerText.includes('more') || lowerText.includes('progress')) {
+      return <HiCheckCircle className="h-5 w-5 text-green-500" />;
+    } else {
+      return <HiInformationCircle className="h-5 w-5 text-blue-500" />;
+    }
   };
 
   if (status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Spinner size="xl" />
+      </div>
+    );
   }
 
   if (!session) {
@@ -111,127 +206,202 @@ export default function CoachingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-50">
+      {/* Navigation */}
+      <nav className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-bold">Rehab Tracker</h1>
+              <Link href="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                💪 Rehab Tracker
+              </Link>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="text-gray-700 hover:text-gray-900">
-                Dashboard
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link href="/dashboard">
+                <Button color="light" size="sm">
+                  <HiHome className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
               </Link>
-              <Link href="/log" className="text-gray-700 hover:text-gray-900">
-                Log Session
+              <Link href="/log">
+                <Button color="light" size="sm">
+                  <HiPlus className="mr-2 h-4 w-4" />
+                  Log Session
+                </Button>
               </Link>
-              <Link href="/progress" className="text-gray-700 hover:text-gray-900">
-                Progress
+              <Link href="/progress">
+                <Button color="light" size="sm" className="hidden sm:flex">
+                  <HiChartBar className="mr-2 h-4 w-4" />
+                  Progress
+                </Button>
               </Link>
-              <Link href="/coaching" className="text-blue-600 font-semibold">
-                AI Coaching
-              </Link>
-              <button
-                onClick={handleSignOut}
-                className="text-gray-700 hover:text-gray-900"
-              >
-                Sign Out
-              </button>
+              <Button color="gray" size="sm" onClick={handleSignOut}>
+                <HiLogout className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">AI Coaching</h2>
-                <p className="text-gray-600 mt-1">Get personalized recommendations based on your session history</p>
+      <main className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header Card */}
+        <Card className="mb-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-0 shadow-xl">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center mb-4">
+                <HiSparkles className="h-10 w-10 mr-3" />
+                <div>
+                  <h2 className="text-3xl font-bold">AI Coaching</h2>
+                  <p className="text-purple-100 mt-1">Get personalized recommendations powered by AI</p>
+                </div>
               </div>
-              <button
-                onClick={analyzeProgress}
-                disabled={loading}
-                className={`px-6 py-3 rounded-lg font-medium text-white transition-colors ${
-                  loading 
-                    ? 'bg-blue-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {loading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Analyzing...
-                  </span>
-                ) : (
-                  '🤖 Analyze My Progress'
-                )}
-              </button>
             </div>
+            <Button
+              onClick={analyzeProgress}
+              disabled={loading}
+              color="light"
+              size="lg"
+              className="flex-shrink-0"
+            >
+              {loading ? (
+                <>
+                  <Spinner size="sm" className="mr-2" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <HiLightBulb className="mr-2 h-5 w-5" />
+                  Analyze Progress
+                </>
+              )}
+            </Button>
+          </div>
+        </Card>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                <p className="text-red-800 font-medium">⚠️ {error}</p>
-              </div>
-            )}
+        {/* Error Alert */}
+        {error && (
+          <Alert color="failure" icon={HiExclamation} className="mb-8" onDismiss={() => setError(null)}>
+            <span className="font-semibold">Error:</span> {error}
+          </Alert>
+        )}
 
-            {currentRecommendation && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mt-6">
-                <div className="flex items-center mb-4">
-                  <span className="text-3xl mr-3">🎯</span>
+        {/* Current Recommendation */}
+        {currentRecommendation && (
+          <Card className="mb-8 border-2 border-blue-200 shadow-xl">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 -m-6 mb-6 p-6 rounded-t-lg border-b-2 border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="bg-blue-600 p-3 rounded-full mr-4">
+                    <HiSparkles className="h-6 w-6 text-white" />
+                  </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">Your Latest Coaching Report</h3>
-                    <p className="text-sm text-gray-600">Based on {sessionsAnalyzed} recent data points</p>
+                    <h3 className="text-2xl font-bold text-gray-900">Your Latest Coaching Report</h3>
+                    <div className="flex items-center mt-1 text-sm text-gray-600">
+                      <HiClock className="mr-1 h-4 w-4" />
+                      <span>Based on {sessionsAnalyzed} recent data points</span>
+                    </div>
                   </div>
                 </div>
-                <div className="prose prose-blue max-w-none">
-                  {formatRecommendation(currentRecommendation)}
-                </div>
+                <Badge color="success" size="lg">
+                  New
+                </Badge>
               </div>
-            )}
-          </div>
+            </div>
+            <div className="prose prose-lg max-w-none">
+              {formatRecommendation(currentRecommendation)}
+            </div>
+          </Card>
+        )}
 
-          {history.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-semibold mb-4 text-gray-900">📜 Coaching History</h3>
-              <div className="space-y-4">
-                {history.map((log) => (
-                  <details key={log.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                    <summary className="cursor-pointer font-medium text-gray-900">
-                      {new Date(log.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                      <span className="text-sm text-gray-500 ml-2">
-                        ({log.context?.sessions_analyzed || 0} sessions analyzed)
+        {/* Loading State */}
+        {loading && !currentRecommendation && (
+          <Card className="mb-8">
+            <div className="text-center py-12">
+              <Spinner size="xl" className="mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Analyzing Your Progress</h3>
+              <p className="text-gray-600">Our AI is reviewing your session history...</p>
+            </div>
+          </Card>
+        )}
+
+        {/* Coaching History */}
+        {history.length > 0 && (
+          <Card className="shadow-lg">
+            <div className="flex items-center mb-6">
+              <HiClock className="h-6 w-6 text-purple-600 mr-3" />
+              <h3 className="text-2xl font-bold text-gray-900">Coaching History</h3>
+            </div>
+            <div className="space-y-4">
+              {history.map((log, index) => (
+                <details 
+                  key={log.id} 
+                  className="group border-2 border-gray-200 rounded-lg p-5 hover:border-blue-300 transition-all cursor-pointer bg-gradient-to-r from-white to-gray-50"
+                >
+                  <summary className="font-semibold text-gray-900 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Badge color="purple" className="mr-3">
+                        Report {history.length - index}
+                      </Badge>
+                      <span className="text-gray-700">
+                        {new Date(log.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
-                    </summary>
-                    <div className="mt-4 pt-4 border-t border-gray-200 prose prose-sm max-w-none">
+                    </div>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <HiInformationCircle className="mr-1 h-4 w-4" />
+                      {log.context?.sessions_analyzed || 0} sessions analyzed
+                    </div>
+                  </summary>
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="prose prose-sm max-w-none">
                       {formatRecommendation(log.recommendation)}
                     </div>
-                  </details>
-                ))}
-              </div>
+                  </div>
+                </details>
+              ))}
             </div>
-          )}
+          </Card>
+        )}
 
-          {history.length === 0 && !currentRecommendation && !loading && (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <span className="text-6xl mb-4 block">🏋️</span>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Coaching History Yet</h3>
-              <p className="text-gray-600">
-                Click "Analyze My Progress" to get your first personalized coaching recommendations!
+        {/* Empty State */}
+        {history.length === 0 && !currentRecommendation && !loading && (
+          <Card className="shadow-lg">
+            <div className="text-center py-16">
+              <div className="bg-purple-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <HiLightBulb className="h-10 w-10 text-purple-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">No Coaching History Yet</h3>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                Click "Analyze Progress" to get your first personalized coaching recommendations based on your session data!
               </p>
+              <Button
+                onClick={analyzeProgress}
+                disabled={loading}
+                color="purple"
+                size="lg"
+              >
+                <HiSparkles className="mr-2 h-5 w-5" />
+                Get Your First Report
+              </Button>
             </div>
-          )}
-        </div>
+          </Card>
+        )}
+
+        {/* Info Section */}
+        <Alert color="info" icon={HiInformationCircle} className="mt-8">
+          <div>
+            <span className="font-semibold">How AI Coaching Works:</span>
+            <p className="mt-2">
+              Our AI analyzes your rehab sessions, pain levels, and exercise patterns to provide personalized 
+              recommendations. The more data you log, the better insights you'll receive!
+            </p>
+          </div>
+        </Alert>
       </main>
     </div>
   );
